@@ -1,0 +1,44 @@
+## Ignore Visual Studio temporary files, build results, and user-specific files
+## See https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+
+# Build Folders
+/bin/
+/obj/
+
+# Visual Studio cache and workspace files
+/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Auto-generated files
+*.generated.cs
+
+# Rider/IDE
+/.idea/
+.vscode/
+
+# NuGet package directories
+/.nuget/packages/
+packages/
+
+# Resharper
+_ReSharper*/
+*.ReSharper*
+
+# DotCover
+.dotCover
+
+# TeamCity
+.teamcity/
+
+# IIS Express
+.vs/*/applicationhost.config
+
+# Logs
+*.log
+
+# OS generated
+.DS_Store
+Thumbs.db
