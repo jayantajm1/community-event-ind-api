@@ -453,11 +453,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api.csproj",
+      "projectUniqueName": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api.csproj",
       "projectName": "community-event-ind-api",
-      "projectPath": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api.csproj",
+      "projectPath": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api.csproj",
       "packagesPath": "C:\\Users\\hp\\.nuget\\packages\\",
-      "outputPath": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\community-event-ind-api\\obj\\",
+      "outputPath": "D:\\Freelancing project\\Community event\\community-event-ind-api\\community-event-ind-api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
