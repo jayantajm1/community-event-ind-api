@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("community-event-ind-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aabd9d15475ff70004691efb1e60aa4faa40eb4a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+32a6cd5855fe00e2c3e016f4f12809b5e641c18a")]
 [assembly: System.Reflection.AssemblyProductAttribute("community-event-ind-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("community-event-ind-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
