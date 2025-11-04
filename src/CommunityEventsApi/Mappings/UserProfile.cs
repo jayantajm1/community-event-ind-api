@@ -1,4 +1,5 @@
 using AutoMapper;
+using CommunityEventsApi.DTOs.Auth;
 using CommunityEventsApi.DTOs.Users;
 using CommunityEventsApi.Models;
 
