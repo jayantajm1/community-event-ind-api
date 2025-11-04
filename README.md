@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Community Events API
 
 A comprehensive ASP.NET Core Web API for managing community events, user interactions, and event registrations.
@@ -206,3 +207,6 @@ Your Name - Community Events Team
 - ASP.NET Core documentation
 - Entity Framework Core documentation
 - Community contributors
+=======
+A community-driven events platform where community leaders/hosts can create events (with photos, description, registration), members join events with their community ID, comment and ask questions, search events by location/type, and where admins moderate and close events after completion.
+>>>>>>> fe92b33d3d893be9fe98d19bca98778e77593af3
