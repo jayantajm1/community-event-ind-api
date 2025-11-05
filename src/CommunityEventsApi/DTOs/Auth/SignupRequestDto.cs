@@ -6,11 +6,7 @@ public class SignupRequestDto
 {
     [Required]
     [StringLength(100)]
-    public string FirstName { get; set; } = string.Empty;
-
-    [Required]
-    [StringLength(100)]
-    public string LastName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;  // Changed from FirstName + LastName
 
     [Required]
     [EmailAddress]

@@ -5,10 +5,7 @@ namespace CommunityEventsApi.DTOs.Users;
 public class UpdateProfileDto
 {
     [StringLength(100)]
-    public string? FirstName { get; set; }
-
-    [StringLength(100)]
-    public string? LastName { get; set; }
+    public string? FullName { get; set; }  // Changed from FirstName + LastName
 
     [Phone]
     public string? PhoneNumber { get; set; }

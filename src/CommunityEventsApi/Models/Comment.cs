@@ -1,31 +1,33 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace CommunityEventsApi.Models;
 
-public class Comment
+public partial class Comment
 {
-    [Key]
     public Guid Id { get; set; }
 
-    [Required]
-    [StringLength(1000)]
-    public string Content { get; set; } = string.Empty;
-
-    [Required]
     public Guid EventId { get; set; }
 
-    [Required]
     public Guid UserId { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public Guid? ParentCommentId { get; set; }
+
+    public string Content { get; set; } = null!;
+
+    public List<string>? Attachments { get; set; }
+
+    public bool? IsHidden { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation properties
-    [ForeignKey("EventId")]
     public virtual Event Event { get; set; } = null!;
 
-    [ForeignKey("UserId")]
+    public virtual ICollection<Comment> InverseParentComment { get; set; } = new List<Comment>();
+
+    public virtual Comment? ParentComment { get; set; }
+
     public virtual User User { get; set; } = null!;
 }

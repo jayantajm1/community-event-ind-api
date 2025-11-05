@@ -37,19 +37,16 @@ public class UserService : IUserService
             throw new KeyNotFoundException("User not found");
         }
 
-        if (!string.IsNullOrEmpty(updateDto.FirstName))
-            user.FirstName = updateDto.FirstName;
-
-        if (!string.IsNullOrEmpty(updateDto.LastName))
-            user.LastName = updateDto.LastName;
+        if (!string.IsNullOrEmpty(updateDto.FullName))
+            user.FullName = updateDto.FullName;  // Changed to match scaffolded model
 
         if (!string.IsNullOrEmpty(updateDto.PhoneNumber))
-            user.PhoneNumber = updateDto.PhoneNumber;
+            user.Phone = updateDto.PhoneNumber;  // Changed PhoneNumber to Phone
 
         // TODO: Handle profile image upload
         if (updateDto.ProfileImage != null)
         {
-            // Save image and update user.ProfileImageUrl
+            // Save image and update user.AvatarUrl (changed from ProfileImageUrl)
         }
 
         user.UpdatedAt = DateTime.UtcNow;

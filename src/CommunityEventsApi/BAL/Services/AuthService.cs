@@ -47,10 +47,10 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FirstName = signupDto.FirstName,
-            LastName = signupDto.LastName,
+            FullName = signupDto.FullName,  // Changed from FirstName + LastName
+            Username = signupDto.Email.Split('@')[0],  // Generate username from email
             Email = signupDto.Email,
-            PhoneNumber = signupDto.PhoneNumber,
+            Phone = signupDto.PhoneNumber,  // Changed from PhoneNumber to Phone
             PasswordHash = PasswordHasher.HashPassword(signupDto.Password),
             Role = AppConstants.UserRole,
             CreatedAt = DateTime.UtcNow

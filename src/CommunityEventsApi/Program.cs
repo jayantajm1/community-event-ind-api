@@ -55,7 +55,7 @@ builder.Services.AddSwaggerGen(c =>
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
@@ -92,24 +92,26 @@ builder.Services.AddCors(options =>
 
 // Register Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<ICommunityRepository, CommunityRepository>();
-builder.Services.AddScoped<IEventRepository, EventRepository>();
+// Temporarily disabled until models are fixed:
+// builder.Services.AddScoped<ICommunityRepository, CommunityRepository>();
+// builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICommunityService, CommunityService>();
-builder.Services.AddScoped<IEventService, EventService>();
+// Temporarily disabled until models are fixed:
+// builder.Services.AddScoped<ICommunityService, CommunityService>();
+// builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 
 // Register Helpers
 builder.Services.AddSingleton<TokenGenerator>();
 
-// Configure Logging
-LoggingConfig.ConfigureLogging(builder);
+// Configure Logging - basic built-in logging
+builder.Services.AddLogging();
 
-// Configure OpenTelemetry (optional)
+// Configure OpenTelemetry (optional) - commented out for now
 // OpenTelemetryConfig.ConfigureOpenTelemetry(builder);
 
 var app = builder.Build();
@@ -124,9 +126,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Use custom middleware
-app.UseMiddleware<ExceptionMiddleware>();
-app.UseMiddleware<LoggingMiddleware>();
+// Use custom middleware - commented out temporarily due to model mismatches
+// app.UseMiddleware<ExceptionMiddleware>();
+// app.UseMiddleware<LoggingMiddleware>();
 
 app.UseHttpsRedirection();
 

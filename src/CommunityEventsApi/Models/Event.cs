@@ -1,66 +1,53 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
 namespace CommunityEventsApi.Models;
 
-public class Event
+public partial class Event
 {
-    [Key]
     public Guid Id { get; set; }
 
-    [Required]
-    [StringLength(200)]
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; set; } = null!;
 
-    [Required]
-    [StringLength(2000)]
-    public string Description { get; set; } = string.Empty;
+    public string Slug { get; set; } = null!;
 
-    [Required]
-    public DateTime StartDate { get; set; }
+    public string Description { get; set; } = null!;
 
-    [Required]
-    public DateTime EndDate { get; set; }
-
-    public string? ImageUrl { get; set; }
-
-    [Required]
-    [StringLength(50)]
-    public string Status { get; set; } = "Upcoming";
-
-    [Required]
-    public int MaxAttendees { get; set; }
-
-    public int CurrentAttendees { get; set; } = 0;
-
-    [Required]
     public Guid CommunityId { get; set; }
 
-    public Guid? CategoryId { get; set; }
+    public Guid OrganizerId { get; set; }
 
-    [Required]
-    public Guid LocationId { get; set; }
+    public string EventType { get; set; } = null!;
 
-    [Required]
-    public Guid CreatedBy { get; set; }
+    public List<string>? Tags { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime StartDatetime { get; set; }
+
+    public DateTime EndDatetime { get; set; }
+
+    public string? LocationName { get; set; }
+
+    public string? Address { get; set; }
+
+    public int? MaxParticipants { get; set; }
+
+    public string RegistrationMode { get; set; } = null!;
+
+    public string Visibility { get; set; } = null!;
+
+    public string Status { get; set; } = null!;
+
+    public List<string>? Images { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation properties
-    [ForeignKey("CommunityId")]
+    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+
     public virtual Community Community { get; set; } = null!;
 
-    [ForeignKey("CategoryId")]
-    public virtual EventCategory? Category { get; set; }
+    public virtual User Organizer { get; set; } = null!;
 
-    [ForeignKey("LocationId")]
-    public virtual Location Location { get; set; } = null!;
-
-    [ForeignKey("CreatedBy")]
-    public virtual User Creator { get; set; } = null!;
-
-    public virtual ICollection<EventRegistration> Registrations { get; set; } = new List<EventRegistration>();
-    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public virtual ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 }

@@ -1,46 +1,49 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 
 namespace CommunityEventsApi.Models;
 
-public class User
+public partial class User
 {
-    [Key]
     public Guid Id { get; set; }
 
-    [Required]
-    [StringLength(100)]
-    public string FirstName { get; set; } = string.Empty;
+    public string FullName { get; set; } = null!;
 
-    [Required]
-    [StringLength(100)]
-    public string LastName { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
 
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    public string Email { get; set; } = string.Empty;
+    public string Email { get; set; } = null!;
 
-    [Required]
-    public string PasswordHash { get; set; } = string.Empty;
+    public string? Phone { get; set; }
 
-    [Phone]
-    public string? PhoneNumber { get; set; }
+    public string PasswordHash { get; set; } = null!;
 
-    public string? ProfileImageUrl { get; set; }
+    public string? AvatarUrl { get; set; }
 
-    [Required]
-    [StringLength(50)]
-    public string Role { get; set; } = "User";
+    public string? Bio { get; set; }
 
-    public bool IsEmailVerified { get; set; } = false;
+    public string Role { get; set; } = null!;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public Guid? CommunityId { get; set; }
+
+    public string Status { get; set; } = null!;
+
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? LastSeen { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation properties
-    public virtual ICollection<Event> CreatedEvents { get; set; } = new List<Event>();
-    public virtual ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
+    public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
-    public virtual ICollection<Membership> Memberships { get; set; } = new List<Membership>();
+
+    public virtual ICollection<Community> Communities { get; set; } = new List<Community>();
+
+    public virtual Community? Community { get; set; }
+
+    public virtual ICollection<Event> Events { get; set; } = new List<Event>();
+
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    public virtual ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 }
