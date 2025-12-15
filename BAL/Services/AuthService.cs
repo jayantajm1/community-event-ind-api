@@ -52,7 +52,7 @@ public class AuthService : IAuthService
             Email = signupDto.Email,
             Phone = signupDto.PhoneNumber,  // Changed from PhoneNumber to Phone
             PasswordHash = PasswordHasher.HashPassword(signupDto.Password),
-            Role = AppConstants.UserRole,
+            Role = AppConstants.MemberRole,
             CreatedAt = DateTime.UtcNow
         };
 

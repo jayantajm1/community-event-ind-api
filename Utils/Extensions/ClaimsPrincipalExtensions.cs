@@ -22,6 +22,6 @@ public static class ClaimsPrincipalExtensions
 
     public static bool IsAdmin(this ClaimsPrincipal principal)
     {
-        return principal.IsInRole("Admin");
+        return principal.IsInRole("admin");
     }
 }

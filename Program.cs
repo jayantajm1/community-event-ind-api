@@ -90,19 +90,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register Repositories
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-// Temporarily disabled until models are fixed:
-// builder.Services.AddScoped<ICommunityRepository, CommunityRepository>();
-// builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<ICommunityRepository, CommunityRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 
-// Register Services
+// Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-// Temporarily disabled until models are fixed:
-// builder.Services.AddScoped<ICommunityService, CommunityService>();
-// builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<ICommunityService, CommunityService>();
+builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 
 // Register Helpers

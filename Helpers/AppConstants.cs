@@ -3,9 +3,11 @@ namespace CommunityEventsApi.Helpers;
 public static class AppConstants
 {
     // Roles
-    public const string AdminRole = "Admin";
-    public const string UserRole = "User";
-    public const string ModeratorRole = "Moderator";
+    public const string MemberRole = "member";
+    public const string HostRole = "host";
+    public const string ModeratorRole = "moderator";
+    public const string AdminRole = "admin";
+    public const string SuperAdminRole = "super_admin";
 
     // Event Status
     public const string EventStatusUpcoming = "Upcoming";
