@@ -28,6 +28,12 @@ public class UserService : IUserService
         return user == null ? null : _mapper.Map<UserDto>(user);
     }
 
+    public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    {
+        var users = await _userRepository.GetAllAsync();
+        return _mapper.Map<IEnumerable<UserDto>>(users);
+    }
+
     public async Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileDto updateDto)
     {
         var user = await _userRepository.GetByIdAsync(userId);

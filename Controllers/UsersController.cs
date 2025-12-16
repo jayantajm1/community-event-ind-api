@@ -1,5 +1,6 @@
 using CommunityEventsApi.BAL.Interfaces;
 using CommunityEventsApi.DTOs.Users;
+using CommunityEventsApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -25,30 +26,32 @@ public class UsersController : ControllerBase
     /// </summary>
     /// <returns>User profile information</returns>
     [HttpGet("profile")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserDto>> GetProfile()
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<UserDto>>> GetProfile()
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<UserDto>.Unauthorized("Invalid user"));
             }
 
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null)
             {
-                return NotFound(new { message = "User not found" });
+                return NotFound(HttpApiResponse<UserDto>.NotFound("User not found"));
             }
 
-            return Ok(user);
+            return Ok(HttpApiResponse<UserDto>.Success(user, "Profile retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving user profile");
-            return StatusCode(500, new { message = "An error occurred while retrieving profile" });
+            return StatusCode(500, HttpApiResponse<UserDto>.InternalServerError("An error occurred while retrieving profile"));
         }
     }
 
@@ -58,24 +61,25 @@ public class UsersController : ControllerBase
     /// <param name="id">User ID</param>
     /// <returns>User information</returns>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserDto>> GetUserById(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<UserDto>>> GetUserById(Guid id)
     {
         try
         {
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
-                return NotFound(new { message = "User not found" });
+                return NotFound(HttpApiResponse<UserDto>.NotFound("User not found"));
             }
 
-            return Ok(user);
+            return Ok(HttpApiResponse<UserDto>.Success(user, "User retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving user {UserId}", id);
-            return StatusCode(500, new { message = "An error occurred while retrieving user" });
+            return StatusCode(500, HttpApiResponse<UserDto>.InternalServerError("An error occurred while retrieving user"));
         }
     }
 
@@ -85,25 +89,26 @@ public class UsersController : ControllerBase
     /// <param name="updateDto">Updated profile information</param>
     /// <returns>Updated user information</returns>
     [HttpPut("profile")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<UserDto>>> UpdateProfile([FromBody] UpdateProfileDto updateDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<UserDto>.Unauthorized("Invalid user"));
             }
 
             var updatedUser = await _userService.UpdateProfileAsync(userId, updateDto);
-            return Ok(updatedUser);
+            return Ok(HttpApiResponse<UserDto>.Success(updatedUser, "Profile updated successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating user profile");
-            return StatusCode(500, new { message = "An error occurred while updating profile" });
+            return StatusCode(500, HttpApiResponse<UserDto>.InternalServerError("An error occurred while updating profile"));
         }
     }
 
@@ -114,9 +119,10 @@ public class UsersController : ControllerBase
     /// <param name="updateDto">Updated profile information</param>
     /// <returns>Updated user information</returns>
     [HttpPut("{id}")]
-    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<UserDto>> UpdateUser(Guid id, [FromBody] UpdateProfileDto updateDto)
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<UserDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<UserDto>>> UpdateUser(Guid id, [FromBody] UpdateProfileDto updateDto)
     {
         try
         {
@@ -126,16 +132,16 @@ public class UsersController : ControllerBase
             // Only allow admin or the user themselves to update
             if (currentUserId != id && userRole != "Admin")
             {
-                return Forbid();
+                return StatusCode(403, HttpApiResponse<UserDto>.Forbidden("Access denied"));
             }
 
             var updatedUser = await _userService.UpdateProfileAsync(id, updateDto);
-            return Ok(updatedUser);
+            return Ok(HttpApiResponse<UserDto>.Success(updatedUser, "User updated successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating user {UserId}", id);
-            return StatusCode(500, new { message = "An error occurred while updating user" });
+            return StatusCode(500, HttpApiResponse<UserDto>.InternalServerError("An error occurred while updating user"));
         }
     }
 
@@ -145,9 +151,10 @@ public class UsersController : ControllerBase
     /// <param name="id">User ID</param>
     /// <returns>Success message</returns>
     [HttpDelete("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> DeleteUser(Guid id)
     {
         try
         {
@@ -157,16 +164,16 @@ public class UsersController : ControllerBase
             // Only allow admin or the user themselves to delete
             if (currentUserId != id && userRole != "Admin")
             {
-                return Forbid();
+                return StatusCode(403, HttpApiResponse<object>.Forbidden("Access denied"));
             }
 
             await _userService.DeleteUserAsync(id);
-            return Ok(new { message = "User deleted successfully" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "User deleted successfully", null));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting user {UserId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting user" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while deleting user"));
         }
     }
 

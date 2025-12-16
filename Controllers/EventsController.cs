@@ -1,5 +1,6 @@
 using CommunityEventsApi.BAL.Interfaces;
 using CommunityEventsApi.DTOs.Events;
+using CommunityEventsApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -25,18 +26,19 @@ public class EventsController : ControllerBase
     /// <param name="filter">Filter parameters</param>
     /// <returns>List of events</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<EventDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<EventDto>>> GetAllEvents([FromQuery] EventFilterDto filter)
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<EventDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<EventDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<IEnumerable<EventDto>>>> GetAllEvents([FromQuery] EventFilterDto filter)
     {
         try
         {
             var events = await _eventService.GetAllEventsAsync(filter);
-            return Ok(events);
+            return Ok(HttpApiResponse<IEnumerable<EventDto>>.Success(events, "Events retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving events");
-            return StatusCode(500, new { message = "An error occurred while retrieving events" });
+            return StatusCode(500, HttpApiResponse<IEnumerable<EventDto>>.InternalServerError("An error occurred while retrieving events"));
         }
     }
 
@@ -46,24 +48,25 @@ public class EventsController : ControllerBase
     /// <param name="id">Event ID</param>
     /// <returns>Event details</returns>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<EventDto>> GetEventById(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<EventDto>>> GetEventById(Guid id)
     {
         try
         {
             var eventDto = await _eventService.GetEventByIdAsync(id);
             if (eventDto == null)
             {
-                return NotFound(new { message = "Event not found" });
+                return NotFound(HttpApiResponse<EventDto>.NotFound("Event not found"));
             }
 
-            return Ok(eventDto);
+            return Ok(HttpApiResponse<EventDto>.Success(eventDto, "Event retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving event {EventId}", id);
-            return StatusCode(500, new { message = "An error occurred while retrieving event" });
+            return StatusCode(500, HttpApiResponse<EventDto>.InternalServerError("An error occurred while retrieving event"));
         }
     }
 
@@ -75,8 +78,9 @@ public class EventsController : ControllerBase
     /// <param name="radiusKm">Search radius in kilometers (default: 10)</param>
     /// <returns>List of nearby events</returns>
     [HttpGet("nearby")]
-    [ProducesResponseType(typeof(IEnumerable<EventDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<EventDto>>> GetNearbyEvents(
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<EventDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<EventDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<IEnumerable<EventDto>>>> GetNearbyEvents(
         [FromQuery] double latitude,
         [FromQuery] double longitude,
         [FromQuery] double radiusKm = 10)
@@ -84,12 +88,12 @@ public class EventsController : ControllerBase
         try
         {
             var events = await _eventService.GetNearbyEventsAsync(latitude, longitude, radiusKm);
-            return Ok(events);
+            return Ok(HttpApiResponse<IEnumerable<EventDto>>.Success(events, "Nearby events retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving nearby events");
-            return StatusCode(500, new { message = "An error occurred while retrieving nearby events" });
+            return StatusCode(500, HttpApiResponse<IEnumerable<EventDto>>.InternalServerError("An error occurred while retrieving nearby events"));
         }
     }
 
@@ -100,30 +104,32 @@ public class EventsController : ControllerBase
     /// <returns>Created event</returns>
     [HttpPost]
     [Authorize]
-    [ProducesResponseType(typeof(EventDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<EventDto>> CreateEvent([FromBody] CreateEventDto createDto)
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<EventDto>>> CreateEvent([FromBody] CreateEventDto createDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<EventDto>.Unauthorized("Invalid user"));
             }
 
             var createdEvent = await _eventService.CreateEventAsync(createDto, userId);
-            return CreatedAtAction(nameof(GetEventById), new { id = createdEvent.Id }, createdEvent);
+            return CreatedAtAction(nameof(GetEventById), new { id = createdEvent.Id }, new HttpApiResponse<EventDto>(System.Net.HttpStatusCode.Created, "Event created successfully", createdEvent));
         }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning("Event creation failed: {Message}", ex.Message);
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(HttpApiResponse<EventDto>.BadRequest(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating event");
-            return StatusCode(500, new { message = "An error occurred while creating event" });
+            return StatusCode(500, HttpApiResponse<EventDto>.InternalServerError("An error occurred while creating event"));
         }
     }
 
@@ -135,35 +141,37 @@ public class EventsController : ControllerBase
     /// <returns>Updated event</returns>
     [HttpPut("{id}")]
     [Authorize]
-    [ProducesResponseType(typeof(EventDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<EventDto>> UpdateEvent(Guid id, [FromBody] CreateEventDto updateDto)
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<EventDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<EventDto>>> UpdateEvent(Guid id, [FromBody] CreateEventDto updateDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<EventDto>.Unauthorized("Invalid user"));
             }
 
             var updatedEvent = await _eventService.UpdateEventAsync(id, updateDto, userId);
-            return Ok(updatedEvent);
+            return Ok(HttpApiResponse<EventDto>.Success(updatedEvent, "Event updated successfully"));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Unauthorized event update attempt: {Message}", ex.Message);
-            return Forbid();
+            return StatusCode(403, HttpApiResponse<EventDto>.Forbidden(ex.Message));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(HttpApiResponse<EventDto>.NotFound(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating event {EventId}", id);
-            return StatusCode(500, new { message = "An error occurred while updating event" });
+            return StatusCode(500, HttpApiResponse<EventDto>.InternalServerError("An error occurred while updating event"));
         }
     }
 
@@ -174,35 +182,37 @@ public class EventsController : ControllerBase
     /// <returns>Success message</returns>
     [HttpDelete("{id}")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteEvent(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> DeleteEvent(Guid id)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<object>.Unauthorized("Invalid user"));
             }
 
             await _eventService.DeleteEventAsync(id, userId);
-            return Ok(new { message = "Event deleted successfully" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "Event deleted successfully", null));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Unauthorized event deletion attempt: {Message}", ex.Message);
-            return Forbid();
+            return StatusCode(403, HttpApiResponse<object>.Forbidden(ex.Message));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(HttpApiResponse<object>.NotFound(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting event {EventId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting event" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while deleting event"));
         }
     }
 
@@ -213,39 +223,41 @@ public class EventsController : ControllerBase
     /// <returns>Success message</returns>
     [HttpPost("{id}/register")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RegisterForEvent(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> RegisterForEvent(Guid id)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<object>.Unauthorized("Invalid user"));
             }
 
             var result = await _eventService.RegisterForEventAsync(id, userId);
             if (!result)
             {
-                return BadRequest(new { message = "Unable to register for event. Event may be full or you may already be registered." });
+                return BadRequest(HttpApiResponse<object>.BadRequest("Unable to register for event"));
             }
 
-            return Ok(new { message = "Successfully registered for event" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "Successfully registered for event", null));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(HttpApiResponse<object>.NotFound(ex.Message));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(HttpApiResponse<object>.BadRequest(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering for event {EventId}", id);
-            return StatusCode(500, new { message = "An error occurred while registering for event" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while registering for event"));
         }
     }
 
@@ -256,30 +268,32 @@ public class EventsController : ControllerBase
     /// <returns>Success message</returns>
     [HttpPost("{id}/unregister")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UnregisterFromEvent(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> UnregisterFromEvent(Guid id)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<object>.Unauthorized("Invalid user"));
             }
 
             var result = await _eventService.UnregisterFromEventAsync(id, userId);
             if (!result)
             {
-                return BadRequest(new { message = "Unable to unregister from event. You may not be registered." });
+                return BadRequest(HttpApiResponse<object>.BadRequest("Unable to unregister from event"));
             }
 
-            return Ok(new { message = "Successfully unregistered from event" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "Successfully unregistered from event", null));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error unregistering from event {EventId}", id);
-            return StatusCode(500, new { message = "An error occurred while unregistering from event" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while unregistering from event"));
         }
     }
 

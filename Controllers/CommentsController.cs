@@ -1,5 +1,6 @@
 using CommunityEventsApi.BAL.Interfaces;
 using CommunityEventsApi.DTOs.Comments;
+using CommunityEventsApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -25,18 +26,19 @@ public class CommentsController : ControllerBase
     /// <param name="eventId">Event ID</param>
     /// <returns>List of comments</returns>
     [HttpGet("event/{eventId}")]
-    [ProducesResponseType(typeof(IEnumerable<CommentDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsByEvent(Guid eventId)
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<CommentDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<CommentDto>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<IEnumerable<CommentDto>>>> GetCommentsByEvent(Guid eventId)
     {
         try
         {
             var comments = await _commentService.GetCommentsByEventAsync(eventId);
-            return Ok(comments);
+            return Ok(new HttpApiResponse<IEnumerable<CommentDto>>(System.Net.HttpStatusCode.OK, "Comments retrieved successfully", comments));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving comments for event {EventId}", eventId);
-            return StatusCode(500, new { message = "An error occurred while retrieving comments" });
+            return StatusCode(500, new HttpApiResponse<IEnumerable<CommentDto>>(System.Net.HttpStatusCode.InternalServerError, "An error occurred while retrieving comments", null));
         }
     }
 
@@ -46,24 +48,25 @@ public class CommentsController : ControllerBase
     /// <param name="id">Comment ID</param>
     /// <returns>Comment details</returns>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(CommentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<CommentDto>> GetCommentById(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<CommentDto>>> GetCommentById(Guid id)
     {
         try
         {
             var comment = await _commentService.GetCommentByIdAsync(id);
             if (comment == null)
             {
-                return NotFound(new { message = "Comment not found" });
+                return NotFound(HttpApiResponse<CommentDto>.NotFound("Comment not found"));
             }
 
-            return Ok(comment);
+            return Ok(HttpApiResponse<CommentDto>.Success(comment, "Comment retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving comment {CommentId}", id);
-            return StatusCode(500, new { message = "An error occurred while retrieving comment" });
+            return StatusCode(500, HttpApiResponse<CommentDto>.InternalServerError("An error occurred while retrieving comment"));
         }
     }
 
@@ -74,30 +77,32 @@ public class CommentsController : ControllerBase
     /// <returns>Created comment</returns>
     [HttpPost]
     [Authorize]
-    [ProducesResponseType(typeof(CommentDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CommentDto>> CreateComment([FromBody] CreateCommentDto createDto)
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<CommentDto>>> CreateComment([FromBody] CreateCommentDto createDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<CommentDto>.Unauthorized("Invalid user"));
             }
 
             var createdComment = await _commentService.CreateCommentAsync(createDto, userId);
-            return CreatedAtAction(nameof(GetCommentById), new { id = createdComment.Id }, createdComment);
+            return CreatedAtAction(nameof(GetCommentById), new { id = createdComment.Id }, new HttpApiResponse<CommentDto>(System.Net.HttpStatusCode.Created, "Comment created successfully", createdComment));
         }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning("Comment creation failed: {Message}", ex.Message);
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(HttpApiResponse<CommentDto>.BadRequest(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating comment");
-            return StatusCode(500, new { message = "An error occurred while creating comment" });
+            return StatusCode(500, HttpApiResponse<CommentDto>.InternalServerError("An error occurred while creating comment"));
         }
     }
 
@@ -109,35 +114,37 @@ public class CommentsController : ControllerBase
     /// <returns>Updated comment</returns>
     [HttpPut("{id}")]
     [Authorize]
-    [ProducesResponseType(typeof(CommentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<CommentDto>> UpdateComment(Guid id, [FromBody] UpdateCommentDto updateDto)
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<CommentDto>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<CommentDto>>> UpdateComment(Guid id, [FromBody] UpdateCommentDto updateDto)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<CommentDto>.Unauthorized("Invalid user"));
             }
 
             var updatedComment = await _commentService.UpdateCommentAsync(id, updateDto.Content, userId);
-            return Ok(updatedComment);
+            return Ok(HttpApiResponse<CommentDto>.Success(updatedComment, "Comment updated successfully"));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Unauthorized comment update attempt: {Message}", ex.Message);
-            return Forbid();
+            return StatusCode(403, HttpApiResponse<CommentDto>.Forbidden(ex.Message));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(HttpApiResponse<CommentDto>.NotFound(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating comment {CommentId}", id);
-            return StatusCode(500, new { message = "An error occurred while updating comment" });
+            return StatusCode(500, HttpApiResponse<CommentDto>.InternalServerError("An error occurred while updating comment"));
         }
     }
 
@@ -148,35 +155,37 @@ public class CommentsController : ControllerBase
     /// <returns>Success message</returns>
     [HttpDelete("{id}")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteComment(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> DeleteComment(Guid id)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<object>.Unauthorized("Invalid user"));
             }
 
             await _commentService.DeleteCommentAsync(id, userId);
-            return Ok(new { message = "Comment deleted successfully" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "Comment deleted successfully", null));
         }
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Unauthorized comment deletion attempt: {Message}", ex.Message);
-            return Forbid();
+            return StatusCode(403, HttpApiResponse<object>.Forbidden(ex.Message));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(HttpApiResponse<object>.NotFound(ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting comment {CommentId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting comment" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while deleting comment"));
         }
     }
 

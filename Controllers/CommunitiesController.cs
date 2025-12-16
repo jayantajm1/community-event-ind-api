@@ -1,5 +1,6 @@
 using CommunityEventsApi.BAL.Interfaces;
 using CommunityEventsApi.Models;
+using CommunityEventsApi.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -24,18 +25,19 @@ public class CommunitiesController : ControllerBase
     /// </summary>
     /// <returns>List of communities</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<Community>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<Community>>> GetAllCommunities()
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<Community>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<Community>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<IEnumerable<Community>>>> GetAllCommunities()
     {
         try
         {
             var communities = await _communityService.GetAllCommunitiesAsync();
-            return Ok(communities);
+            return Ok(new HttpApiResponse<IEnumerable<Community>>(System.Net.HttpStatusCode.OK, "Communities retrieved successfully", communities));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving communities");
-            return StatusCode(500, new { message = "An error occurred while retrieving communities" });
+            return StatusCode(500, new HttpApiResponse<IEnumerable<Community>>(System.Net.HttpStatusCode.InternalServerError, "An error occurred while retrieving communities", null));
         }
     }
 
@@ -45,24 +47,25 @@ public class CommunitiesController : ControllerBase
     /// <param name="id">Community ID</param>
     /// <returns>Community details</returns>
     [HttpGet("{id}")]
-    [ProducesResponseType(typeof(Community), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Community>> GetCommunityById(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<Community>>> GetCommunityById(Guid id)
     {
         try
         {
             var community = await _communityService.GetCommunityByIdAsync(id);
             if (community == null)
             {
-                return NotFound(new { message = "Community not found" });
+                return NotFound(HttpApiResponse<Community>.NotFound("Community not found"));
             }
 
-            return Ok(community);
+            return Ok(HttpApiResponse<Community>.Success(community, "Community retrieved successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving community {CommunityId}", id);
-            return StatusCode(500, new { message = "An error occurred while retrieving community" });
+            return StatusCode(500, HttpApiResponse<Community>.InternalServerError("An error occurred while retrieving community"));
         }
     }
 
@@ -72,24 +75,26 @@ public class CommunitiesController : ControllerBase
     /// <returns>User's communities</returns>
     [HttpGet("my-communities")]
     [Authorize]
-    [ProducesResponseType(typeof(IEnumerable<Community>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<Community>>> GetMyCommunities()
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<Community>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<Community>>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<IEnumerable<Community>>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<IEnumerable<Community>>>> GetMyCommunities()
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(new HttpApiResponse<IEnumerable<Community>>(System.Net.HttpStatusCode.Unauthorized, "Invalid user", null));
             }
 
             var communities = await _communityService.GetUserCommunitiesAsync(userId);
-            return Ok(communities);
+            return Ok(new HttpApiResponse<IEnumerable<Community>>(System.Net.HttpStatusCode.OK, "User communities retrieved successfully", communities));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving user communities");
-            return StatusCode(500, new { message = "An error occurred while retrieving communities" });
+            return StatusCode(500, new HttpApiResponse<IEnumerable<Community>>(System.Net.HttpStatusCode.InternalServerError, "An error occurred while retrieving communities", null));
         }
     }
 
@@ -100,16 +105,17 @@ public class CommunitiesController : ControllerBase
     /// <returns>Created community</returns>
     [HttpPost]
     [Authorize]
-    [ProducesResponseType(typeof(Community), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Community>> CreateCommunity([FromBody] Community community)
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<Community>>> CreateCommunity([FromBody] Community community)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<Community>.Unauthorized("Invalid user"));
             }
 
             // Set the creator as the community admin
@@ -117,12 +123,12 @@ public class CommunitiesController : ControllerBase
             community.CreatedAt = DateTime.UtcNow;
 
             var createdCommunity = await _communityService.CreateCommunityAsync(community);
-            return CreatedAtAction(nameof(GetCommunityById), new { id = createdCommunity.Id }, createdCommunity);
+            return CreatedAtAction(nameof(GetCommunityById), new { id = createdCommunity.Id }, new HttpApiResponse<Community>(System.Net.HttpStatusCode.Created, "Community created successfully", createdCommunity));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating community");
-            return StatusCode(500, new { message = "An error occurred while creating community" });
+            return StatusCode(500, HttpApiResponse<Community>.InternalServerError("An error occurred while creating community"));
         }
     }
 
@@ -134,39 +140,42 @@ public class CommunitiesController : ControllerBase
     /// <returns>Updated community</returns>
     [HttpPut("{id}")]
     [Authorize]
-    [ProducesResponseType(typeof(Community), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Community>> UpdateCommunity(Guid id, [FromBody] Community community)
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<Community>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<Community>>> UpdateCommunity(Guid id, [FromBody] Community community)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<Community>.Unauthorized("Invalid user"));
             }
 
             var existingCommunity = await _communityService.GetCommunityByIdAsync(id);
             if (existingCommunity == null)
             {
-                return NotFound(new { message = "Community not found" });
+                return NotFound(HttpApiResponse<Community>.NotFound("Community not found"));
             }
 
             // Check if user is the creator or admin
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
             if (existingCommunity.CreatedBy != userId && userRole != "Admin")
             {
-                return Forbid();
+                return StatusCode(403, HttpApiResponse<Community>.Forbidden("Access denied"));
             }
 
             community.UpdatedAt = DateTime.UtcNow;
             var updatedCommunity = await _communityService.UpdateCommunityAsync(id, community);
-            return Ok(updatedCommunity);
+            return Ok(HttpApiResponse<Community>.Success(updatedCommunity, "Community updated successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating community {CommunityId}", id);
-            return StatusCode(500, new { message = "An error occurred while updating community" });
+            return StatusCode(500, HttpApiResponse<Community>.InternalServerError("An error occurred while updating community"));
         }
     }
 
@@ -177,39 +186,41 @@ public class CommunitiesController : ControllerBase
     /// <returns>Success message</returns>
     [HttpDelete("{id}")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteCommunity(Guid id)
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(HttpApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<HttpApiResponse<object>>> DeleteCommunity(Guid id)
     {
         try
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                return Unauthorized();
+                return Unauthorized(HttpApiResponse<object>.Unauthorized("Invalid user"));
             }
 
             var existingCommunity = await _communityService.GetCommunityByIdAsync(id);
             if (existingCommunity == null)
             {
-                return NotFound(new { message = "Community not found" });
+                return NotFound(HttpApiResponse<object>.NotFound("Community not found"));
             }
 
             // Check if user is the creator or admin
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
             if (existingCommunity.CreatedBy != userId && userRole != "Admin")
             {
-                return Forbid();
+                return StatusCode(403, HttpApiResponse<object>.Forbidden("Access denied"));
             }
 
             await _communityService.DeleteCommunityAsync(id);
-            return Ok(new { message = "Community deleted successfully" });
+            return Ok(new HttpApiResponse<object>(System.Net.HttpStatusCode.OK, "Community deleted successfully", null));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting community {CommunityId}", id);
-            return StatusCode(500, new { message = "An error occurred while deleting community" });
+            return StatusCode(500, HttpApiResponse<object>.InternalServerError("An error occurred while deleting community"));
         }
     }
 
